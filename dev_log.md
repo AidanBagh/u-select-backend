@@ -3,92 +3,73 @@
 ## Goal
 Set up the VPS to receive backend code pushes directly from the local machine via SSH and git, without going through GitHub.
 
-The local workspace has two parts:
-- `backend/` → pushed directly to VPS via git (this folder)
-- `u-select/` → frontend, goes through GitHub separately
+- `backend/` → its own git repo, pushed directly to VPS via SSH
+- `u-select/` → frontend, separate repo, goes through GitHub
 
 ---
 
-## Step 1 — Install git on VPS
+## Actual Working Setup (as of April 5, 2026)
 
-```bash
-sudo apt update && sudo apt install git -y
-git --version
-```
+### VPS Details
+- **Provider**: Google Cloud (GCP)
+- **IP**: `34.132.140.203`
+- **OS**: Debian/Ubuntu
+- **Users on VPS**:
+  - `danbagheni` — main user, owns the repos, used for Google Cloud browser SSH
+  - `dan-macbook` — created automatically by GCP when SSH key was added
+  - `root` — enabled for SSH key login (see below)
 
----
+### Where things live on the VPS
+- **Bare repo** (the git hub): `/home/danbagheni/repos/u-select-backend.git`
+- **Working directory** (live code): `/home/danbagheni/apps/u-select-backend`
+- **Post-receive hook**: `/home/danbagheni/repos/u-select-backend.git/hooks/post-receive`
 
-## Step 2 — Create the bare repo (the git "hub" on this VPS)
-
-```bash
-mkdir -p ~/repos/u-select-backend.git
-cd ~/repos/u-select-backend.git
-git init --bare
-```
-
----
-
-## Step 3 — Create the working directory (where the actual code will live)
-
-```bash
-mkdir -p ~/apps/u-select-backend
-```
-
----
-
-## Step 4 — Set up the post-receive hook (auto-deploys code on every push)
-
-```bash
-nano ~/repos/u-select-backend.git/hooks/post-receive
-```
-
-Paste the following content into the file:
-
+### Post-receive hook content
 ```bash
 #!/bin/bash
-git --work-tree=/root/apps/u-select-backend \
-    --git-dir=/root/repos/u-select-backend.git \
+git --work-tree=/home/danbagheni/apps/u-select-backend \
+    --git-dir=/home/danbagheni/repos/u-select-backend.git \
     checkout -f
 echo "Deployed successfully"
 ```
 
-Save and exit (`Ctrl+X`, then `Y`, then `Enter`), then make it executable:
+### Local machine git setup
+- Git is initialized inside `backend/` only (not the parent folder)
+- Remote name: `vps`
+- Remote URL: `ssh://root@34.132.140.203/home/danbagheni/repos/u-select-backend.git`
 
+### Root SSH — how it was enabled on GCP
+GCP blocks root SSH by default. To enable it:
+1. SSH in as `dan-macbook` (the GCP-created user)
+2. Copy the authorized key to root: `sudo cp ~/.ssh/authorized_keys /root/.ssh/authorized_keys`
+3. Uncomment root login in sshd config: `sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config`
+4. Restart SSH: `sudo systemctl restart ssh`
+
+Root pushes work because root can access files owned by `danbagheni`, and the safe.directory exception was added:
 ```bash
-chmod +x ~/repos/u-select-backend.git/hooks/post-receive
+git config --global --add safe.directory /home/danbagheni/repos/u-select-backend.git
 ```
 
 ---
 
-## Step 5 — Verify the hook is executable
+## Daily deploy command (from local `backend/` folder)
 
 ```bash
-ls -la ~/repos/u-select-backend.git/hooks/post-receive
-```
-
-Should show `-rwxr-xr-x` permissions.
-
----
-
-## That's it — VPS side is ready.
-
-The local machine will now add this VPS as a git remote and push the backend folder using:
-
-```bash
-git remote add vps ssh://root@your-vps-ip/root/repos/u-select-backend.git
-git subtree push --prefix=backend vps main
-```
-
-Every subsequent deploy from the local machine is just:
-
-```bash
-git subtree push --prefix=backend vps main
+git add .
+git commit -m "your message"
+git push vps main
 ```
 
 ---
 
 ## Notes
-- The bare repo at `~/repos/u-select-backend.git` is the central hub (like GitHub)
-- The working directory at `~/apps/u-select-backend` is where the live code lives
-- The post-receive hook automatically syncs the working directory on every push
-- Changes made on the VPS can be committed and pushed back to the bare repo, then pulled locally
+- `backend/` has its own `.git` — it is NOT a subtree of the parent folder
+- Root SSH uses key-only auth (`prohibit-password`) — no password brute force risk
+- The post-receive hook auto-deploys to `/home/danbagheni/apps/u-select-backend` on every push
+- To SSH into the VPS: `ssh root@34.132.140.203` or `ssh danbagheni@34.132.140.203` (via GCP browser console)
+
+
+
+
+###In case Ip change
+git remote set-url vps ssh://root@NEW_IP/home/danbagheni/repos/u-select-backend.git
