@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const jobRoutes = require('./src/routes/jobs');
 const applicantRoutes = require('./src/routes/applicants');
+const chatRoutes = require('./src/routes/chat');
 
 const app = express();
 
@@ -15,5 +16,6 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applicants', applicantRoutes);
+app.use('/api/chat', chatRoutes);
 
 module.exports = app;
