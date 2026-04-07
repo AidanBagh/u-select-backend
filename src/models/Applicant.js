@@ -11,6 +11,8 @@ const applicantSchema = new mongoose.Schema(
     education: { type: String },
     summary: { type: String },
     source: { type: String, enum: ['structured', 'upload'], required: true },
+    resumeData: { type: Buffer },
+    resumeMimeType: { type: String },
   },
   { timestamps: true }
 );

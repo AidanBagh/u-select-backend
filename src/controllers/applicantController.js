@@ -1,13 +1,14 @@
 const fs = require('fs');
 const Applicant = require('../models/Applicant');
-const { parseFile } = require('../services/fileParserService');
+const { parseFileWithGemini } = require('../services/fileParserService');
 
 // GET /api/applicants?jobId=
+// Excludes resumeData binary field from list responses to keep payloads light
 const getApplicantsByJob = async (req, res) => {
   try {
     const { jobId } = req.query;
     if (!jobId) return res.status(400).json({ message: 'jobId query param required' });
-    const applicants = await Applicant.find({ jobId }).sort({ createdAt: -1 });
+    const applicants = await Applicant.find({ jobId }, { resumeData: 0 }).sort({ createdAt: -1 });
     res.json(applicants);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -25,20 +26,27 @@ const createStructured = async (req, res) => {
 };
 
 // POST /api/applicants/upload
+// Flow: multer saves temp file → Gemini reads base64 → parses fields → stores binary in DB → deletes temp file
 const uploadFile = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const { jobId } = req.body;
     if (!jobId) return res.status(400).json({ message: 'jobId is required' });
 
-    const records = parseFile(req.file.path);
-    const applicants = await Applicant.insertMany(
-      records.map((r) => ({ ...r, jobId, source: 'upload' }))
-    );
+    const { parsed, fileData, mimeType } = await parseFileWithGemini(req.file.path);
+
+    const applicant = await Applicant.create({
+      ...parsed,
+      jobId,
+      source: 'upload',
+      resumeData: fileData,
+      resumeMimeType: mimeType,
+    });
 
     fs.unlink(req.file.path, () => {});
-    res.status(201).json({ count: applicants.length, applicants });
+    res.status(201).json({ _id: applicant._id, name: applicant.name, email: applicant.email });
   } catch (err) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
     res.status(400).json({ message: err.message });
   }
 };

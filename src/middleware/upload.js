@@ -12,10 +12,10 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  if (['.csv', '.xlsx', '.xls'].includes(ext)) cb(null, true);
-  else cb(new Error('Only CSV and Excel files are allowed'));
+  if (['.csv', '.xlsx', '.xls', '.pdf', '.doc', '.docx'].includes(ext)) cb(null, true);
+  else cb(new Error('Only CSV, Excel, PDF, and Word files are allowed'));
 };
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: 7 * 1024 * 1024 } });
 
 module.exports = upload;

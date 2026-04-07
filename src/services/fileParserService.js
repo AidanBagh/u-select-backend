@@ -1,25 +1,42 @@
-const xlsx = require('xlsx');
+const fs = require('fs');
 const path = require('path');
+const genAI = require('../config/gemini');
 
-const parseFile = (filePath) => {
+const MIME_TYPES = {
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.csv': 'text/csv',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.xls': 'application/vnd.ms-excel',
+};
+
+const parseFileWithGemini = async (filePath) => {
   const ext = path.extname(filePath).toLowerCase();
-  if (['.xlsx', '.xls', '.csv'].includes(ext)) return parseSpreadsheet(filePath);
-  throw new Error(`Unsupported file type: ${ext}`);
+  const mimeType = MIME_TYPES[ext];
+  if (!mimeType) throw new Error(`Unsupported file type: ${ext}`);
+
+  const fileData = fs.readFileSync(filePath);
+  const base64Data = fileData.toString('base64');
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+
+  const prompt =
+    'You are a recruiter assistant. Extract the following fields from this CV/resume ' +
+    'and return ONLY a valid JSON object with no markdown, no code fences, and no explanation. ' +
+    'Fields: name (string), email (string), phone (string), skills (array of strings), ' +
+    'experienceYears (number), education (string), summary (string). ' +
+    'If a field is not found use an empty string, 0 for numbers, or [] for arrays.';
+
+  const result = await model.generateContent([
+    prompt,
+    { inlineData: { mimeType, data: base64Data } },
+  ]);
+
+  const text = result.response.text().trim();
+  const parsed = JSON.parse(text);
+
+  return { parsed, fileData, mimeType };
 };
 
-const parseSpreadsheet = (filePath) => {
-  const workbook = xlsx.readFile(filePath);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = xlsx.utils.sheet_to_json(sheet);
-  return rows.map((row) => ({
-    name: row.name || row.Name || '',
-    email: row.email || row.Email || '',
-    phone: row.phone || row.Phone || '',
-    skills: row.skills ? String(row.skills).split(',').map((s) => s.trim()) : [],
-    experienceYears: Number(row.experienceYears || row.experience || 0),
-    education: row.education || row.Education || '',
-    summary: row.summary || row.Summary || '',
-  }));
-};
-
-module.exports = { parseFile };
+module.exports = { parseFileWithGemini };
