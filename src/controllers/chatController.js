@@ -23,6 +23,25 @@ const MIME_TYPES = {
   '.xls': 'application/vnd.ms-excel',
 };
 
+const buildGeminiHistory = (rawHistory) => {
+  // Skip the initial AI welcome message (no preceding user message)
+  const firstUserIdx = rawHistory.findIndex((m) => m.role === 'user');
+  const relevant = firstUserIdx === -1 ? [] : rawHistory.slice(firstUserIdx);
+
+  return [
+    // System prompt injected as the first user/model exchange
+    { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+    { role: 'model', parts: [{ text: 'Understood. I am the U-Select Agent, ready to assist with your recruitment tasks.' }] },
+    // Past conversation turns
+    ...relevant
+      .filter((m) => !m.isStreaming && m.text && m.text.trim())
+      .map((m) => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.text }],
+      })),
+  ];
+};
+
 const chat = async (req, res) => {
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
@@ -34,16 +53,13 @@ const chat = async (req, res) => {
       if (!mimeType) return res.status(400).json({ message: `Unsupported file type: ${ext}` });
 
       const base64Data = req.file.buffer.toString('base64');
-      const prompt =
-        SYSTEM_PROMPT + '\n\n' +
-        'A CV has been attached. Extract the candidate details and ' +
-        'reply in a friendly, conversational tone summarising what you found. ' +
-        'Structure your reply with these clearly labelled sections: ' +
-        'Name, Email, Phone, Skills, Experience, Education, Summary. ' +
-        'End with: "Let me know if you want to save this applicant to a job."';
 
-      const result = await model.generateContent([
-        prompt,
+      let rawHistory = [];
+      try { rawHistory = JSON.parse(req.body.history || '[]'); } catch { rawHistory = []; }
+
+      const chatSession = model.startChat({ history: buildGeminiHistory(rawHistory) });
+      const result = await chatSession.sendMessage([
+        'A CV has been attached. Extract the candidate details and reply in a friendly, conversational tone summarising what you found. Structure your reply with these clearly labelled sections: Name, Email, Phone, Skills, Experience, Education, Summary. End with: "Let me know if you want to save this applicant to a job."',
         { inlineData: { mimeType, data: base64Data } },
       ]);
 
@@ -51,12 +67,13 @@ const chat = async (req, res) => {
     }
 
     // Plain text branch
-    const { message } = req.body;
+    const { message, history: rawHistory = [] } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ message: 'message is required' });
     }
 
-    const result = await model.generateContent(SYSTEM_PROMPT + '\n\n' + message);
+    const chatSession = model.startChat({ history: buildGeminiHistory(rawHistory) });
+    const result = await chatSession.sendMessage(message);
     res.json({ reply: result.response.text() });
   } catch (err) {
     res.status(500).json({ message: err.message });
