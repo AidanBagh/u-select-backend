@@ -2,10 +2,29 @@ const genAI = require('../config/gemini');
 
 const rankApplicants = async (job, applicants) => {
   const candidateList = applicants
-    .map(
-      (a) =>
-        `- applicantId: ${a._id}\n  name: ${a.name}\n  skills: ${(a.skills || []).join(', ')}\n  experienceYears: ${a.experienceYears}\n  education: ${a.education || 'N/A'}\n  summary: ${a.summary || 'N/A'}`
-    )
+    .map((a) => {
+      const work = (a.workHistory || [])
+        .map(
+          (w) =>
+            `    • ${w.role} at ${w.company} (${w.startDate || '?'} – ${w.endDate || 'present'}): ${(w.responsibilities || []).join('; ')}`
+        )
+        .join('\n');
+
+      const edu = (a.education || [])
+        .map((e) => `    • ${e.degree} in ${e.field || 'N/A'} — ${e.institution} (${e.year || 'N/A'})`)
+        .join('\n');
+
+      return (
+        `- applicantId: ${a._id}\n` +
+        `  name: ${a.name}\n` +
+        `  skills: ${(a.skills || []).join(', ')}\n` +
+        `  certifications: ${(a.certifications || []).join(', ') || 'N/A'}\n` +
+        `  experienceYears: ${a.experienceYears}\n` +
+        `  workHistory:\n${work || '    N/A'}\n` +
+        `  education:\n${edu || '    N/A'}\n` +
+        `  summary: ${a.summary || 'N/A'}`
+      );
+    })
     .join('\n');
 
   const prompt =
