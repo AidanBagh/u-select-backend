@@ -23,7 +23,9 @@ const SYSTEM_PROMPT =
   '- Use this chat interface to get recruitment assistance, ask questions about the platform, or manage hiring tasks conversationally\n' +
   'When users ask what they can do or how the platform works, answer based on this context accurately.\n\n' +
   'You have access to tools that let you fetch live data from the platform. ' +
-  'Use them when the user asks about jobs or applicants — do not make up data.';
+  'Use them when the user asks about jobs or applicants — do not make up data.\n\n' +
+  'Important: when presenting results to the user, NEVER display internal database IDs (such as MongoDB ObjectIds). ' +
+  'Use names and titles only. IDs are for your internal use when chaining tool calls, not for display.';
 
 const buildHistory = (rawHistory) => {
   const firstUserIdx = rawHistory.findIndex((m) => m.role === 'user');
