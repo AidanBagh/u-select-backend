@@ -4,6 +4,7 @@ const jobRoutes = require('./src/routes/jobs');
 const applicantRoutes = require('./src/routes/applicants');
 const chatRoutes = require('./src/routes/chat');
 const screeningRoutes = require('./src/routes/screening');
+const errorHandler = require('./src/middleware/errorHandler');
 
 const app = express();
 
@@ -19,5 +20,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/applicants', applicantRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/screening', screeningRoutes);
+
+app.use(errorHandler);
 
 module.exports = app;
