@@ -2,6 +2,20 @@ const fs = require('fs');
 const Applicant = require('../models/Applicant');
 const { parseFileWithGemini } = require('../services/fileParserService');
 
+// GET /api/applicants/all — returns all applicants across jobs (max 50, newest first)
+// Populates jobId with job title for display
+const getAllApplicants = async (req, res) => {
+  try {
+    const applicants = await Applicant.find({}, { resumeData: 0 })
+      .populate('jobId', 'title')
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json(applicants);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // GET /api/applicants?jobId=
 // Excludes resumeData binary field from list responses to keep payloads light
 const getApplicantsByJob = async (req, res) => {
@@ -54,4 +68,4 @@ const uploadFile = async (req, res) => {
   }
 };
 
-module.exports = { getApplicantsByJob, createStructured, uploadFile };
+module.exports = { getAllApplicants, getApplicantsByJob, createStructured, uploadFile };
