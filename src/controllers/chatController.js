@@ -34,7 +34,8 @@ const chat = async (req, res) => {
 
       const base64Data = req.file.buffer.toString('base64');
       const prompt =
-        'You are a recruiter assistant reviewing a CV. Extract the candidate details and ' +
+        SYSTEM_PROMPT + '\n\n' +
+        'A CV has been attached. Extract the candidate details and ' +
         'reply in a friendly, conversational tone summarising what you found. ' +
         'Structure your reply with these clearly labelled sections: ' +
         'Name, Email, Phone, Skills, Experience, Education, Summary. ' +
@@ -54,7 +55,7 @@ const chat = async (req, res) => {
       return res.status(400).json({ message: 'message is required' });
     }
 
-    const result = await model.generateContent(message);
+    const result = await model.generateContent(SYSTEM_PROMPT + '\n\n' + message);
     res.json({ reply: result.response.text() });
   } catch (err) {
     res.status(500).json({ message: err.message });
