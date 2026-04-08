@@ -44,7 +44,10 @@ const uploadFile = async (req, res) => {
     });
 
     fs.unlink(req.file.path, () => {});
-    res.status(201).json({ _id: applicant._id, name: applicant.name, email: applicant.email });
+    const applicantObj = applicant.toObject();
+    delete applicantObj.resumeData;
+    delete applicantObj.resumeMimeType;
+    res.status(201).json({ applicants: [applicantObj] });
   } catch (err) {
     if (req.file?.path) fs.unlink(req.file.path, () => {});
     res.status(400).json({ message: err.message });
