@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const { getStats } = require('./src/controllers/statsController');
 const jobRoutes = require('./src/routes/jobs');
 const applicantRoutes = require('./src/routes/applicants');
 const chatRoutes = require('./src/routes/chat');
@@ -15,6 +16,8 @@ app.use(express.json());
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.get('/api/stats', getStats);
 
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applicants', applicantRoutes);
