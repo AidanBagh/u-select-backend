@@ -1,5 +1,5 @@
-const genAI = require('../config/gemini');
-const { getToolsForContext, getGeminiDeclarations, executeTool } = require('./tools/index');
+import genAI from '../config/gemini.js';
+import { getToolsForContext, getGeminiDeclarations, executeTool } from './tools/index.js';
 
 const SYSTEM_PROMPT =
   'You are the U-Select Agent — an intelligent recruitment assistant built by the Umurava Select platform, ' +
@@ -27,7 +27,18 @@ const SYSTEM_PROMPT =
   'Important: when presenting results to the user, NEVER display internal database IDs (such as MongoDB ObjectIds). ' +
   'Use names and titles only. IDs are for your internal use when chaining tool calls, not for display.';
 
-const buildHistory = (rawHistory) => {
+interface HistoryMessage {
+  role?: string;
+  text?: string;
+  isStreaming?: boolean;
+}
+
+interface GeminiHistoryEntry {
+  role: 'user' | 'model';
+  parts: Array<{ text: string }>;
+}
+
+const buildHistory = (rawHistory: HistoryMessage[]): GeminiHistoryEntry[] => {
   const firstUserIdx = rawHistory.findIndex((m) => m.role === 'user');
   const relevant = firstUserIdx === -1 ? [] : rawHistory.slice(firstUserIdx);
 
@@ -36,28 +47,43 @@ const buildHistory = (rawHistory) => {
     { role: 'model', parts: [{ text: 'Understood. I am the U-Select Agent, ready to assist with your recruitment tasks.' }] },
     ...relevant
       .filter((m) => !m.isStreaming && m.text && m.text.trim())
-      .map((m) => ({
+      .map<GeminiHistoryEntry>((m) => ({
         role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.text }],
+        parts: [{ text: m.text as string }],
       })),
   ];
 };
 
-const runAgent = async ({ message, history = [], context = 'default', file, mimeType }) => {
+export interface RunAgentOptions {
+  message: string;
+  history?: unknown[];
+  context?: string;
+  file?: string;
+  mimeType?: string;
+}
+
+const runAgent = async ({
+  message,
+  history = [],
+  context = 'default',
+  file,
+  mimeType,
+}: RunAgentOptions): Promise<string> => {
   const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
   const tools = getToolsForContext(context);
   const toolConfig = getGeminiDeclarations(tools);
 
   const chatSession = model.startChat({
-    history: buildHistory(history),
-    tools: [toolConfig],
+    history: buildHistory(history as HistoryMessage[]),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tools: [toolConfig] as any,
   });
 
   // CV upload — attach file inline
   const userParts = file
     ? [
         { text: message || 'A CV has been attached. Extract the candidate details and reply in a friendly, conversational tone. Structure your reply with: Name, Email, Phone, Skills, Experience, Education, Summary. End with: "Let me know if you want to save this applicant to a job."' },
-        { inlineData: { mimeType, data: file } },
+        { inlineData: { mimeType: mimeType as string, data: file } },
       ]
     : message;
 
@@ -69,12 +95,11 @@ const runAgent = async ({ message, history = [], context = 'default', file, mime
     const parts = candidate?.content?.parts || [];
     const toolCallPart = parts.find((p) => p.functionCall);
 
-    if (!toolCallPart) break; // no tool call — final text response
+    if (!toolCallPart || !toolCallPart.functionCall) break;
 
     const { name, args } = toolCallPart.functionCall;
-    const toolResult = await executeTool(name, args);
+    const toolResult = await executeTool(name, args as Record<string, unknown>);
 
-    // Send tool result back to Gemini to continue
     result = await chatSession.sendMessage([
       { functionResponse: { name, response: { result: toolResult } } },
     ]);
@@ -83,4 +108,4 @@ const runAgent = async ({ message, history = [], context = 'default', file, mime
   return result.response.text();
 };
 
-module.exports = { runAgent };
+export { runAgent };

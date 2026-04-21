@@ -1,10 +1,11 @@
-const Job = require('../models/Job');
-const Applicant = require('../models/Applicant');
-const Screening = require('../models/Screening');
-const { rankApplicants } = require('../services/geminiService');
+import type { RequestHandler } from 'express';
+import Job from '../models/Job.js';
+import Applicant from '../models/Applicant.js';
+import Screening from '../models/Screening.js';
+import { rankApplicants } from '../services/geminiService.js';
 
 // POST /api/screening/run
-const runScreening = async (req, res) => {
+const runScreening: RequestHandler = async (req, res) => {
   try {
     const { jobId } = req.body;
     if (!jobId) return res.status(400).json({ message: 'jobId is required' });
@@ -15,7 +16,8 @@ const runScreening = async (req, res) => {
     const applicants = await Applicant.find({ jobId }, { resumeData: 0 });
     if (!applicants.length) return res.status(400).json({ message: 'No applicants found for this job' });
 
-    const ranked = await rankApplicants(job, applicants);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ranked = await rankApplicants(job as any, applicants as any);
 
     const rankedApplicants = ranked.map((item, index) => ({
       applicantId: item.applicantId,
@@ -33,19 +35,21 @@ const runScreening = async (req, res) => {
 
     res.json(screening);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ message });
   }
 };
 
 // GET /api/screening/:jobId
-const getScreening = async (req, res) => {
+const getScreening: RequestHandler = async (req, res) => {
   try {
     const screening = await Screening.findOne({ jobId: req.params.jobId });
     if (!screening) return res.status(404).json({ message: 'No screening results found for this job' });
     res.json(screening);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ message });
   }
 };
 
-module.exports = { runScreening, getScreening };
+export { runScreening, getScreening };

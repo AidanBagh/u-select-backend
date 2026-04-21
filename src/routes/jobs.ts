@@ -1,13 +1,14 @@
-const express = require('express');
-const router = express.Router();
-const { validateJob } = require('../middleware/validate');
-const {
+import { Router } from 'express';
+import { validateJob } from '../middleware/validate.js';
+import {
   getAllJobs,
   createJob,
   getJobById,
   updateJob,
   deleteJob,
-} = require('../controllers/jobController');
+} from '../controllers/jobController.js';
+
+const router = Router();
 
 router.get('/', getAllJobs);
 router.post('/', validateJob, createJob);
@@ -15,4 +16,4 @@ router.get('/:id', getJobById);
 router.put('/:id', validateJob, updateJob);
 router.delete('/:id', deleteJob);
 
-module.exports = router;
+export default router;

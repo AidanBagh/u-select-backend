@@ -1,6 +1,6 @@
-// Input validation middleware for job and applicant routes
+import type { RequestHandler } from 'express';
 
-const validateJob = (req, res, next) => {
+const validateJob: RequestHandler = (req, res, next) => {
   const { title, description } = req.body;
 
   if (!title || !title.trim()) {
@@ -22,7 +22,7 @@ const validateJob = (req, res, next) => {
   next();
 };
 
-const validateStructuredApplicant = (req, res, next) => {
+const validateStructuredApplicant: RequestHandler = (req, res, next) => {
   const { jobId, name } = req.body;
 
   if (!jobId) return res.status(400).json({ message: 'jobId is required' });
@@ -31,11 +31,11 @@ const validateStructuredApplicant = (req, res, next) => {
   next();
 };
 
-const validateUploadApplicant = (req, res, next) => {
+const validateUploadApplicant: RequestHandler = (req, res, next) => {
   if (!req.body.jobId) {
     return res.status(400).json({ message: 'jobId is required' });
   }
   next();
 };
 
-module.exports = { validateJob, validateStructuredApplicant, validateUploadApplicant };
+export { validateJob, validateStructuredApplicant, validateUploadApplicant };

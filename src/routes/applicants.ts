@@ -1,17 +1,18 @@
-const express = require('express');
-const router = express.Router();
-const upload = require('../middleware/upload');
-const { validateStructuredApplicant, validateUploadApplicant } = require('../middleware/validate');
-const {
+import { Router } from 'express';
+import upload from '../middleware/upload.js';
+import { validateStructuredApplicant, validateUploadApplicant } from '../middleware/validate.js';
+import {
   getAllApplicants,
   getApplicantsByJob,
   createStructured,
   uploadFile,
-} = require('../controllers/applicantController');
+} from '../controllers/applicantController.js';
+
+const router = Router();
 
 router.get('/all', getAllApplicants);
 router.get('/', getApplicantsByJob);
 router.post('/structured', validateStructuredApplicant, createStructured);
 router.post('/upload', upload.single('file'), validateUploadApplicant, uploadFile);
 
-module.exports = router;
+export default router;

@@ -1,5 +1,15 @@
-// Global error handler — must be the last middleware in app.js
-const errorHandler = (err, req, res, next) => {
+import type { ErrorRequestHandler } from 'express';
+import type { Error as MongooseError } from 'mongoose';
+
+interface HttpError extends Error {
+  code?: string;
+  status?: number;
+  statusCode?: number;
+  kind?: string;
+  errors?: Record<string, { message: string }>;
+}
+
+const errorHandler: ErrorRequestHandler = (err: HttpError, req, res, next) => {
   // Multer file-size / file-type errors
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({ message: 'File exceeds the 7 MB limit' });
@@ -9,7 +19,7 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Mongoose validation errors
-  if (err.name === 'ValidationError') {
+  if (err.name === 'ValidationError' && err.errors) {
     const messages = Object.values(err.errors).map((e) => e.message);
     return res.status(400).json({ message: messages.join(', ') });
   }
@@ -27,4 +37,4 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-module.exports = errorHandler;
+export default errorHandler;

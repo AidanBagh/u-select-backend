@@ -1,6 +1,22 @@
-const mongoose = require('mongoose');
+import mongoose, { Schema, Model } from 'mongoose';
 
-const jobSchema = new mongoose.Schema(
+export interface IJobWeights {
+  skills: number;
+  experience: number;
+  education: number;
+  relevance: number;
+}
+
+export interface IJob {
+  title: string;
+  description: string;
+  requirements: string[];
+  weights: IJobWeights;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const jobSchema = new Schema<IJob>(
   {
     title: {
       type: String,
@@ -25,4 +41,6 @@ const jobSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Job', jobSchema);
+const Job: Model<IJob> = mongoose.model<IJob>('Job', jobSchema);
+
+export default Job;

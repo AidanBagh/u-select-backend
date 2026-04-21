@@ -1,6 +1,21 @@
-const genAI = require('../config/gemini');
+import genAI from '../config/gemini.js';
+import type { IJob } from '../models/Job.js';
+import type { IApplicant } from '../models/Applicant.js';
+import type { Types } from 'mongoose';
 
-const rankApplicants = async (job, applicants) => {
+export interface RankedApplicantResult {
+  applicantId: string;
+  name: string;
+  score: number;
+  reasoning: string;
+}
+
+type ApplicantWithId = IApplicant & { _id: Types.ObjectId };
+
+const rankApplicants = async (
+  job: IJob,
+  applicants: ApplicantWithId[]
+): Promise<RankedApplicantResult[]> => {
   const candidateList = applicants
     .map((a) => {
       const work = (a.workHistory || [])
@@ -48,11 +63,11 @@ const rankApplicants = async (job, applicants) => {
     .replace(/```$/i, '')
     .trim();
 
-  const ranked = JSON.parse(clean);
+  const ranked: RankedApplicantResult[] = JSON.parse(clean);
 
   ranked.sort((a, b) => b.score - a.score);
 
   return ranked;
 };
 
-module.exports = { rankApplicants };
+export { rankApplicants };

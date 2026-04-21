@@ -1,8 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const genAI = require('../config/gemini');
+import fs from 'fs';
+import path from 'path';
+import genAI from '../config/gemini.js';
 
-const MIME_TYPES = {
+const MIME_TYPES: Record<string, string> = {
   '.pdf': 'application/pdf',
   '.doc': 'application/msword',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -11,7 +11,36 @@ const MIME_TYPES = {
   '.xls': 'application/vnd.ms-excel',
 };
 
-const parseFileWithGemini = async (filePath) => {
+export interface ParsedResume {
+  name: string;
+  email: string;
+  phone: string;
+  skills: string[];
+  certifications: string[];
+  experienceYears: number;
+  workHistory: Array<{
+    role: string;
+    company: string;
+    startDate: string;
+    endDate: string;
+    responsibilities: string[];
+  }>;
+  education: Array<{
+    degree: string;
+    institution: string;
+    year: string;
+    field: string;
+  }>;
+  summary: string;
+}
+
+export interface ParseFileResult {
+  parsed: ParsedResume;
+  fileData: Buffer;
+  mimeType: string;
+}
+
+const parseFileWithGemini = async (filePath: string): Promise<ParseFileResult> => {
   const ext = path.extname(filePath).toLowerCase();
   const mimeType = MIME_TYPES[ext];
   if (!mimeType) throw new Error(`Unsupported file type: ${ext}`);
@@ -43,9 +72,9 @@ const parseFileWithGemini = async (filePath) => {
   ]);
 
   const text = result.response.text().trim();
-  const parsed = JSON.parse(text);
+  const parsed: ParsedResume = JSON.parse(text);
 
   return { parsed, fileData, mimeType };
 };
 
-module.exports = { parseFileWithGemini };
+export { parseFileWithGemini };

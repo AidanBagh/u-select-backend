@@ -1,7 +1,8 @@
-const path = require('path');
-const { runAgent } = require('../chat/agent');
+import path from 'path';
+import type { RequestHandler } from 'express';
+import { runAgent } from '../chat/agent.js';
 
-const MIME_TYPES = {
+const MIME_TYPES: Record<string, string> = {
   '.pdf': 'application/pdf',
   '.doc': 'application/msword',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -10,9 +11,9 @@ const MIME_TYPES = {
   '.xls': 'application/vnd.ms-excel',
 };
 
-const chat = async (req, res) => {
+const chat: RequestHandler = async (req, res) => {
   try {
-    let history = [];
+    let history: unknown[] = [];
     try { history = JSON.parse(req.body.history || '[]'); } catch { history = []; }
 
     const context = req.body.context || 'default';
@@ -41,8 +42,9 @@ const chat = async (req, res) => {
     const reply = await runAgent({ message, history, context });
     res.json({ reply });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ message });
   }
 };
 
-module.exports = { chat };
+export { chat };
