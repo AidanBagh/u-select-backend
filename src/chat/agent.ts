@@ -25,7 +25,16 @@ const SYSTEM_PROMPT =
   'You have access to tools that let you fetch live data from the platform. ' +
   'Use them when the user asks about jobs or applicants — do not make up data.\n\n' +
   'Important: when presenting results to the user, NEVER display internal database IDs (such as MongoDB ObjectIds). ' +
-  'Use names and titles only. IDs are for your internal use when chaining tool calls, not for display.';
+  'Use names and titles only. IDs are for your internal use when chaining tool calls, not for display.\n\n' +
+  '## Platform UI — Pages & Actions\n' +
+  'Sidebar navigation (always visible): Dashboard, Jobs, Applicants. Bottom: Settings, Logout.\n' +
+  'Dashboard: stat cards (Active Jobs, Total Applicants, Screenings Run), recent jobs list, recent applicants list, "Post a Job" button (goes to /jobs).\n' +
+  'Jobs (/jobs): lists all jobs as cards, search bar, "New Job" button opens a create form modal.\n' +
+  'Job Detail (/jobs/:id): shows job title, description, requirements, scoring weights. Buttons: Edit (opens inline form), Delete (confirms then removes), "View Applicants" (goes to /jobs/:id/applicants), "Run Screening" (goes to /jobs/:id/screening).\n' +
+  'Applicants (/jobs/:id/applicants): lists applicants for that job as cards. Buttons: "Add Manually" (opens structured form modal), "Upload CV" (opens file upload modal). Clicking a card opens a full detail modal.\n' +
+  'All Applicants (/applicants): cross-job view of every applicant with job name label and detail modal.\n' +
+  'Screening (/jobs/:id/screening): ranked table of candidates with score bars and Shortlisted/Not Shortlisted badges. "Reasoning" button per row expands AI explanation inline. "Run Screening" / "Re-run Screening" button at top right. Shows count of candidates evaluated and shortlisted, and last run time.\n' +
+  'Do not invent pages, buttons, or features that are not listed above.';
 
 interface HistoryMessage {
   role?: string;

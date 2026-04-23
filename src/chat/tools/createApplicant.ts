@@ -52,18 +52,22 @@ const handler: Tool['handler'] = async (args = {}) => {
 
   let resolvedJobId = args.jobId as string | undefined;
   const jobTitle = args.jobTitle as string | undefined;
+  let resolvedJob: InstanceType<typeof Job> | null = null;
 
   if (!resolvedJobId && jobTitle) {
     const escaped = jobTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const job = await Job.findOne({ title: { $regex: escaped, $options: 'i' } });
-    if (!job) return `No job found matching the title "${jobTitle}". Please create the job first or provide the correct title.`;
-    resolvedJobId = String(job._id);
+    resolvedJob = await Job.findOne({ title: { $regex: escaped, $options: 'i' } });
+    if (!resolvedJob) return `No job found matching the title "${jobTitle}". Please create the job first or provide the correct title.`;
+    resolvedJobId = String(resolvedJob._id);
   }
 
   if (!resolvedJobId) return 'A job ID or job title is required to add an applicant.';
 
-  const jobExists = await Job.findById(resolvedJobId);
-  if (!jobExists) return 'The specified job does not exist.';
+  // Only query DB if we got a raw jobId (title lookup already found the job)
+  if (!resolvedJob) {
+    resolvedJob = await Job.findById(resolvedJobId);
+  }
+  if (!resolvedJob) return 'The specified job does not exist.';
 
   const applicant = await Applicant.create({
     jobId: resolvedJobId,

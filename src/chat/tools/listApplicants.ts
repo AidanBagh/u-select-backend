@@ -27,7 +27,8 @@ const handler: Tool['handler'] = async (args = {}) => {
   let resolvedJobId: string | undefined = jobId;
 
   if (!resolvedJobId && jobTitle) {
-    const job = await Job.findOne({ title: { $regex: jobTitle, $options: 'i' } });
+    const escaped = jobTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const job = await Job.findOne({ title: { $regex: escaped, $options: 'i' } });
     if (!job) return `No job found matching the title "${jobTitle}".`;
     resolvedJobId = String(job._id);
   }
