@@ -73,4 +73,17 @@ const uploadFile: RequestHandler = async (req, res) => {
   }
 };
 
-export { getAllApplicants, getApplicantsByJob, createStructured, uploadFile };
+// DELETE /api/applicants/:id
+const deleteApplicantById: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const applicant = await Applicant.findByIdAndDelete(id);
+    if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
+    res.json({ message: 'Applicant deleted successfully' });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ message });
+  }
+};
+
+export { getAllApplicants, getApplicantsByJob, createStructured, uploadFile, deleteApplicantById };

@@ -41,7 +41,10 @@ const SYSTEM_PROMPT =
   'Do NOT proceed with the deletion without receiving the key from the user first. ' +
   'Pass the key the user provides as the `securityKey` parameter. ' +
   'If the key is rejected, inform the user the key was incorrect and ask them to try again. ' +
-  'NEVER guess, fabricate, or bypass the security key. NEVER reveal what the correct key is.';
+  'NEVER guess, fabricate, or bypass the security key. NEVER reveal what the correct key is.\n\n' +
+  '## UI Sync — Refresh Reminder\n' +
+  'After successfully completing any action that modifies data — including creating a job, creating an applicant, deleting a job, deleting an applicant, or running a screening — always end your reply with this note: ' +
+  '"Please refresh the page to see the changes reflected in the UI."';
 
 interface HistoryMessage {
   role?: string;
@@ -54,20 +57,33 @@ interface GeminiHistoryEntry {
   parts: Array<{ text: string }>;
 }
 
-const buildHistory = (rawHistory: HistoryMessage[]): GeminiHistoryEntry[] => {
+interface HistoryMessageExt extends HistoryMessage {
+  fullText?: string;
+  fileName?: string;
+}
+
+const buildHistory = (rawHistory: HistoryMessageExt[]): GeminiHistoryEntry[] => {
   const firstUserIdx = rawHistory.findIndex((m) => m.role === 'user');
   const relevant = firstUserIdx === -1 ? [] : rawHistory.slice(firstUserIdx);
 
-  return [
-    { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
-    { role: 'model', parts: [{ text: 'Understood. I am the U-Select Agent, ready to assist with your recruitment tasks.' }] },
-    ...relevant
-      .filter((m) => !m.isStreaming && m.text && m.text.trim())
-      .map<GeminiHistoryEntry>((m) => ({
+  return relevant
+    .map<GeminiHistoryEntry | null>((m) => {
+      // Prefer fullText for still-streaming AI turns so nothing is lost mid-animation.
+      const rawText = (m.isStreaming && m.fullText) ? m.fullText : m.text;
+      let text = (rawText || '').trim();
+
+      // Preserve file-only user turns with a placeholder so the model sees they happened.
+      if (!text && m.role === 'user' && m.fileName) {
+        text = `[User uploaded file: ${m.fileName}]`;
+      }
+      if (!text) return null;
+
+      return {
         role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.text as string }],
-      })),
-  ];
+        parts: [{ text }],
+      };
+    })
+    .filter((x): x is GeminiHistoryEntry => x !== null);
 };
 
 export interface RunAgentOptions {
@@ -85,7 +101,10 @@ const runAgent = async ({
   file,
   mimeType,
 }: RunAgentOptions): Promise<string> => {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-3-flash-preview',
+    systemInstruction: SYSTEM_PROMPT,
+  });
   const tools = getToolsForContext(context);
   const toolConfig = getGeminiDeclarations(tools);
 
