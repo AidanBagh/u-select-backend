@@ -62,6 +62,13 @@ interface HistoryMessageExt extends HistoryMessage {
   fileName?: string;
 }
 
+import path from 'path';
+
+// Helper to reliably generate the same temp file name for a given user uploaded file
+const getTempFileName = (fileName: string) => {
+  return 'chat-' + Buffer.from(fileName).toString('base64').replace(/[^a-zA-Z0-9]/g, '') + path.extname(fileName);
+};
+
 const buildHistory = (rawHistory: HistoryMessageExt[]): GeminiHistoryEntry[] => {
   const firstUserIdx = rawHistory.findIndex((m) => m.role === 'user');
   const relevant = firstUserIdx === -1 ? [] : rawHistory.slice(firstUserIdx);
@@ -72,10 +79,15 @@ const buildHistory = (rawHistory: HistoryMessageExt[]): GeminiHistoryEntry[] => 
       const rawText = (m.isStreaming && m.fullText) ? m.fullText : m.text;
       let text = (rawText || '').trim();
 
-      // Preserve file-only user turns with a placeholder so the model sees they happened.
-      if (!text && m.role === 'user' && m.fileName) {
-        text = `[User uploaded file: ${m.fileName}]`;
+      // Ensure historical context retains the file mapping so Gemini can recall it
+      if (m.role === 'user' && m.fileName) {
+        const tempFileName = getTempFileName(m.fileName);
+        const systemNote = `[System note: The user uploaded a file named ${m.fileName}. Its temporary disk path is "${tempFileName}". If you decide to call createApplicant for this candidate, you MUST pass "${tempFileName}" as the tempFileName parameter so the file can be permanently saved in the database.]`;
+        
+        if (!text) text = systemNote;
+        else text = `${text}\n\n${systemNote}`;
       }
+
       if (!text) return null;
 
       return {
@@ -92,6 +104,7 @@ export interface RunAgentOptions {
   context?: string;
   file?: string;
   mimeType?: string;
+  tempFileName?: string;
 }
 
 const runAgent = async ({
@@ -100,6 +113,7 @@ const runAgent = async ({
   context = 'default',
   file,
   mimeType,
+  tempFileName,
 }: RunAgentOptions): Promise<string> => {
   const model = genAI.getGenerativeModel({
     model: 'gemini-3-flash-preview',
@@ -115,9 +129,14 @@ const runAgent = async ({
   });
 
   // CV upload — attach file inline
+  const systemPromptAddition = tempFileName 
+    ? `\n[System note: The uploaded CV has been saved temporarily as "${tempFileName}". If you decide to add this candidate and call createApplicant, you must pass "${tempFileName}" as the tempFileName argument so the file can be permanently saved in the database.] ` 
+    : '';
+  const defaultPrompt = 'A CV has been attached. Extract the candidate details and reply in a friendly, conversational tone. Structure your reply with: Name, Email, Phone, Skills, Experience, Education, Summary. End with: "Let me know if you want to save this applicant to a job."';
+  
   const userParts = file
     ? [
-        { text: message || 'A CV has been attached. Extract the candidate details and reply in a friendly, conversational tone. Structure your reply with: Name, Email, Phone, Skills, Experience, Education, Summary. End with: "Let me know if you want to save this applicant to a job."' },
+        { text: (message || defaultPrompt) + systemPromptAddition },
         { inlineData: { mimeType: mimeType as string, data: file } },
       ]
     : message;

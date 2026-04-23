@@ -1,6 +1,13 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import Applicant from '../../models/Applicant.js';
 import Job from '../../models/Job.js';
 import type { Tool, ToolDefinition } from './listJobs.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '../../../../uploads');
 
 const definition: ToolDefinition = {
   name: 'createApplicant',
@@ -42,6 +49,10 @@ const definition: ToolDefinition = {
         type: 'string',
         description: 'A brief summary of the applicant profile.',
       },
+      tempFileName: {
+        type: 'string',
+        description: 'If the user uploaded a CV in this or a previous turn, pass the exact temporary filename provided in the system note so the file can be linked to the applicant.',
+      },
     },
     required: ['name'],
   },
@@ -70,6 +81,36 @@ const handler: Tool['handler'] = async (args = {}) => {
   }
   if (!resolvedJob) return 'The specified job does not exist.';
 
+  let resumeData: Buffer | undefined;
+  let resumeMimeType: string | undefined;
+
+  const tempFileName = args.tempFileName as string | undefined;
+  if (tempFileName) {
+    const filePath = path.join(uploadsDir, path.basename(tempFileName));
+    try {
+      if (fs.existsSync(filePath)) {
+        resumeData = fs.readFileSync(filePath);
+        
+        // Infer mimetype from extension if possible
+        const ext = path.extname(tempFileName).toLowerCase();
+        const MIME_TYPES: Record<string, string> = {
+          '.pdf': 'application/pdf',
+          '.doc': 'application/msword',
+          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          '.csv': 'text/csv',
+          '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          '.xls': 'application/vnd.ms-excel',
+        };
+        resumeMimeType = MIME_TYPES[ext] || 'application/octet-stream';
+        
+        // Clean up the temp file after reading
+        fs.unlink(filePath, () => {});
+      }
+    } catch (err) {
+      console.error(`Failed to attach resume file ${tempFileName}:`, err);
+    }
+  }
+
   const applicant = await Applicant.create({
     jobId: resolvedJobId,
     name,
@@ -78,7 +119,9 @@ const handler: Tool['handler'] = async (args = {}) => {
     skills: Array.isArray(args.skills) ? args.skills.map(String) : [],
     experienceYears: typeof args.experienceYears === 'number' ? args.experienceYears : 0,
     summary: (args.summary as string || '').trim() || undefined,
-    source: 'structured',
+    source: resumeData ? 'upload' : 'structured',
+    resumeData,
+    resumeMimeType,
   });
 
   return (

@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import type { RequestHandler } from 'express';
 import { runAgent } from '../chat/agent.js';
 
@@ -31,8 +32,9 @@ const chat: RequestHandler = async (req, res) => {
         message: req.body.message || '',
         history,
         context,
-        file: req.file.buffer.toString('base64'),
+        file: fs.readFileSync(req.file.path, { encoding: 'base64' }),
         mimeType,
+        tempFileName: req.file.filename,
       });
 
       return res.json({ reply });
