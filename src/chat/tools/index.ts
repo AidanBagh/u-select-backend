@@ -1,15 +1,35 @@
 import listJobs from './listJobs.js';
 import listApplicants from './listApplicants.js';
+import getJobDetail from './getJobDetail.js';
+import getApplicantDetail from './getApplicantDetail.js';
+import createJob from './createJob.js';
+import createApplicant from './createApplicant.js';
+import runScreeningTool from './runScreeningTool.js';
+import getScreeningResults from './getScreeningResults.js';
+import deleteJob from './deleteJob.js';
+import deleteApplicant from './deleteApplicant.js';
 import type { Tool } from './listJobs.js';
 
 // Registry — add new tools here as they are built
-const ALL_TOOLS: Tool[] = [listJobs, listApplicants];
+const ALL_TOOLS: Tool[] = [
+  listJobs,
+  listApplicants,
+  getJobDetail,
+  getApplicantDetail,
+  createJob,
+  createApplicant,
+  runScreeningTool,
+  getScreeningResults,
+  deleteJob,
+  deleteApplicant,
+];
 
 // Context map — controls which tools are available per chat location
 const CONTEXT_TOOLS: Record<string, Tool[]> = {
   dashboard: ALL_TOOLS,
-  jobs: [listJobs],
-  applicants: [listApplicants, listJobs],
+  jobs: [listJobs, getJobDetail, createJob, deleteJob],
+  applicants: [listApplicants, getApplicantDetail, createApplicant, deleteApplicant, listJobs, getJobDetail],
+  screening: [runScreeningTool, getScreeningResults, listJobs, getJobDetail],
   default: ALL_TOOLS,
 };
 
