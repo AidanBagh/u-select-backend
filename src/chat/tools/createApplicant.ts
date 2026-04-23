@@ -31,6 +31,7 @@ const definition: ToolDefinition = {
       },
       skills: {
         type: 'array',
+        items: { type: 'string' },
         description: 'List of skills the applicant has.',
       },
       experienceYears: {
@@ -84,7 +85,7 @@ const handler: Tool['handler'] = async (args = {}) => {
     `Applicant added successfully.\n` +
     `Name: ${applicant.name}\n` +
     `ID: ${applicant._id}\n` +
-    `Job: ${jobExists.title}\n` +
+    `Job: ${resolvedJob.title}\n` +
     `Skills: ${(applicant.skills || []).join(', ') || 'N/A'}\n` +
     `Experience: ${applicant.experienceYears} years`
   );

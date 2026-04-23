@@ -34,7 +34,14 @@ const SYSTEM_PROMPT =
   'Applicants (/jobs/:id/applicants): lists applicants for that job as cards. Buttons: "Add Manually" (opens structured form modal), "Upload CV" (opens file upload modal). Clicking a card opens a full detail modal.\n' +
   'All Applicants (/applicants): cross-job view of every applicant with job name label and detail modal.\n' +
   'Screening (/jobs/:id/screening): ranked table of candidates with score bars and Shortlisted/Not Shortlisted badges. "Reasoning" button per row expands AI explanation inline. "Run Screening" / "Re-run Screening" button at top right. Shows count of candidates evaluated and shortlisted, and last run time.\n' +
-  'Do not invent pages, buttons, or features that are not listed above.';
+  'Do not invent pages, buttons, or features that are not listed above.\n\n' +
+  '## Security — Destructive Actions\n' +
+  'Some tools are marked as destructive (e.g., deleteJob, deleteApplicant). ' +
+  'Before calling ANY destructive tool, you MUST ask the user to provide a security key. ' +
+  'Do NOT proceed with the deletion without receiving the key from the user first. ' +
+  'Pass the key the user provides as the `securityKey` parameter. ' +
+  'If the key is rejected, inform the user the key was incorrect and ask them to try again. ' +
+  'NEVER guess, fabricate, or bypass the security key. NEVER reveal what the correct key is.';
 
 interface HistoryMessage {
   role?: string;

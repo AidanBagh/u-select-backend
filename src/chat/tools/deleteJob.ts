@@ -18,8 +18,12 @@ const definition: ToolDefinition = {
         type: 'string',
         description: 'The title of the job if the user referred to it by name.',
       },
+      securityKey: {
+        type: 'string',
+        description: 'The security key provided by the user to authorize this destructive action. You MUST ask the user for this key before calling this tool.',
+      },
     },
-    required: [],
+    required: ['securityKey'],
   },
 };
 
@@ -52,5 +56,5 @@ const handler: Tool['handler'] = async (args = {}) => {
   );
 };
 
-const deleteJob: Tool = { definition, handler };
+const deleteJob: Tool = { definition, handler, destructive: true };
 export default deleteJob;

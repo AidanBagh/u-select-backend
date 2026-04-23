@@ -18,6 +18,7 @@ const definition: ToolDefinition = {
       },
       requirements: {
         type: 'array',
+        items: { type: 'string' },
         description: 'A list of requirements or qualifications for the job.',
       },
       weightsSkills: {

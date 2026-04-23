@@ -16,8 +16,12 @@ const definition: ToolDefinition = {
         type: 'string',
         description: 'The name of the applicant if the user referred to them by name.',
       },
+      securityKey: {
+        type: 'string',
+        description: 'The security key provided by the user to authorize this destructive action. You MUST ask the user for this key before calling this tool.',
+      },
     },
-    required: [],
+    required: ['securityKey'],
   },
 };
 
@@ -41,5 +45,5 @@ const handler: Tool['handler'] = async (args = {}) => {
   return `Applicant "${name}" has been deleted successfully.`;
 };
 
-const deleteApplicant: Tool = { definition, handler };
+const deleteApplicant: Tool = { definition, handler, destructive: true };
 export default deleteApplicant;

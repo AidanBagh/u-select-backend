@@ -41,11 +41,23 @@ const getGeminiDeclarations = (tools: Tool[]) => ({
   functionDeclarations: tools.map((t) => t.definition),
 });
 
+// Security key for destructive operations (swap for env var in production)
+const SECURITY_KEY = 'uselect2026';
+
 // Execute a tool by name with args
 const executeTool = async (name: string, args: Record<string, unknown>): Promise<string> => {
   const tool = ALL_TOOLS.find((t) => t.definition.name === name);
   if (!tool) return `Unknown tool: ${name}`;
+
+  // Gate destructive tools behind a security key
+  if (tool.destructive) {
+    const provided = (args.securityKey as string || '').trim();
+    if (provided !== SECURITY_KEY) {
+      return 'Security key is incorrect or missing. This action requires a valid security key to proceed.';
+    }
+  }
+
   return await tool.handler(args);
 };
 
-export { getToolsForContext, getGeminiDeclarations, executeTool };
+export { getToolsForContext, getGeminiDeclarations, executeTool, SECURITY_KEY };

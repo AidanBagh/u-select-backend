@@ -12,6 +12,7 @@ export interface ToolDefinition {
 
 export interface Tool {
   definition: ToolDefinition;
+  destructive?: boolean;
   handler: (args?: Record<string, unknown>) => Promise<string>;
 }
 
