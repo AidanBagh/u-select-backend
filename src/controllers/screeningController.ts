@@ -40,6 +40,17 @@ const runScreening: RequestHandler = async (req, res) => {
   }
 };
 
+// GET /api/screening — all screenings with job title
+const getAllScreenings: RequestHandler = async (req, res) => {
+  try {
+    const screenings = await Screening.find().populate('jobId', 'title').sort({ updatedAt: -1 });
+    res.json(screenings);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ message });
+  }
+};
+
 // GET /api/screening/:jobId
 const getScreening: RequestHandler = async (req, res) => {
   try {
@@ -52,4 +63,4 @@ const getScreening: RequestHandler = async (req, res) => {
   }
 };
 
-export { runScreening, getScreening };
+export { runScreening, getAllScreenings, getScreening };
