@@ -14,7 +14,11 @@ const MIME_TYPES: Record<string, string> = {
 const chat: RequestHandler = async (req, res) => {
   try {
     let history: unknown[] = [];
-    try { history = JSON.parse(req.body.history || '[]'); } catch { history = []; }
+    if (typeof req.body.history === 'string') {
+      try { history = JSON.parse(req.body.history || '[]'); } catch { history = []; }
+    } else if (Array.isArray(req.body.history)) {
+      history = req.body.history;
+    }
 
     const context = req.body.context || 'default';
 
