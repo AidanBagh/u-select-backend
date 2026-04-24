@@ -1,6 +1,6 @@
 # Backend Structure – u-select
 
-> Node.js (JavaScript) + Express + MongoDB + Gemini API
+> Node.js (TypeScript) + Express + MongoDB + Gemini API
 
 ---
 
@@ -10,39 +10,57 @@
 backend/
 ├── src/
 │   ├── config/
-│   │   ├── db.js               # MongoDB connection (Mongoose)
-│   │   └── gemini.js           # Gemini API client initialisation
+│   │   ├── db.ts               # MongoDB connection (Mongoose)
+│   │   └── gemini.ts           # Gemini API client initialisation
 │   │
 │   ├── models/
-│   │   ├── Job.js              # Job schema (title, description, requirements, weights)
-│   │   ├── Applicant.js        # Applicant schema (profile fields, source: platform | upload)
-│   │   └── Screening.js        # Screening result schema (scores, reasoning, shortlist flag)
+│   │   ├── Job.ts              # Job schema (title, description, requirements, weights)
+│   │   ├── Applicant.ts        # Applicant schema (profile fields, source: platform | upload)
+│   │   └── Screening.ts        # Screening result schema (scores, reasoning, shortlist flag)
 │   │
 │   ├── routes/
-│   │   ├── jobs.js             # /api/jobs
-│   │   ├── applicants.js       # /api/applicants
-│   │   └── screening.js        # /api/screening
+│   │   ├── jobs.ts             # /api/jobs
+│   │   ├── applicants.ts       # /api/applicants
+│   │   ├── screening.ts        # /api/screening
+│   │   └── chat.ts             # /api/chat
 │   │
 │   ├── controllers/
-│   │   ├── jobController.js        # CRUD for jobs
-│   │   ├── applicantController.js  # Ingest applicants (structured or file upload)
-│   │   └── screeningController.js  # Trigger screening, return ranked shortlists
+│   │   ├── jobController.ts        # CRUD for jobs
+│   │   ├── applicantController.ts  # Ingest applicants (structured or file upload)
+│   │   ├── screeningController.ts  # Trigger screening, return ranked shortlists
+│   │   ├── chatController.ts       # Handle AI agent chat requests
+│   │   └── statsController.ts      # Dashboard stats aggregation
 │   │
 │   ├── services/
-│   │   ├── geminiService.js        # Build prompts, call Gemini API, parse responses
-│   │   ├── scoringService.js       # Weighted scoring logic (skills, experience, education, relevance)
-│   │   └── fileParserService.js    # Parse CSV / Excel / PDF into normalised applicant objects
+│   │   ├── geminiService.ts        # Build prompts, call Gemini API, parse responses
+│   │   └── fileParserService.ts    # Parse CSV / Excel / PDF into normalised applicant objects
 │   │
-│   └── middleware/
-│       ├── errorHandler.js         # Global error handler (keeps controllers clean)
-│       ├── rateLimiter.js          # express-rate-limit – protects Gemini cost-per-call routes
-│       ├── validate.js             # Request validation (express-validator or joi)
-│       └── upload.js               # Multer config for file uploads (CSV, Excel, PDF)
+│   ├── middleware/
+│   │   ├── errorHandler.ts         # Global error handler (keeps controllers clean)
+│   │   ├── validate.ts             # Request validation
+│   │   └── upload.ts               # Multer config for file uploads (CSV, Excel, PDF)
+│   │
+│   ├── chat/
+│   │   ├── agent.ts                # AI agent orchestration (Gemini function calling)
+│   │   └── tools/
+│   │       ├── index.ts            # Tool registry
+│   │       ├── createJob.ts
+│   │       ├── deleteJob.ts
+│   │       ├── getJobDetail.ts
+│   │       ├── listJobs.ts
+│   │       ├── createApplicant.ts
+│   │       ├── deleteApplicant.ts
+│   │       ├── getApplicantDetail.ts
+│   │       ├── listApplicants.ts
+│   │       ├── runScreeningTool.ts
+│   │       └── getScreeningResults.ts
+│   │
+│   ├── app.ts                  # Express app setup (routes, middleware registration)
+│   └── server.ts               # Entry point – starts HTTP server
 │
-├── app.js                      # Express app setup (routes, middleware registration)
-├── server.js                   # Entry point – starts HTTP server
 ├── .env                        # Secrets (MONGO_URI, GEMINI_API_KEY, PORT) – in .gitignore
 ├── .gitignore                  # node_modules/, .env, uploads/
+├── tsconfig.json               # TypeScript compiler config
 └── package.json
 ```
 
@@ -58,10 +76,11 @@ backend/
 | `controllers/` | Handle request/response – thin, delegates to services |
 | `services/` | All business logic – reusable, testable, framework-agnostic |
 | `middleware/` | Cross-cutting concerns (errors, validation, file uploads) |
+| `chat/` | AI agent + tool definitions for Gemini function calling |
 
 ---
 
-## API Endpoints (planned)
+## API Endpoints
 
 ### Jobs
 | Method | Path | Description |
@@ -76,14 +95,19 @@ backend/
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/applicants?jobId=` | List applicants for a job |
-| POST | `/api/applicants/structured` | Ingest structured profiles (Scenario 1 – Umurava) |
-| POST | `/api/applicants/upload` | Upload CSV / Excel / PDF (Scenario 2 – External) |
+| POST | `/api/applicants/structured` | Ingest structured profiles |
+| POST | `/api/applicants/upload` | Upload CSV / Excel / PDF |
 
 ### Screening
 | Method | Path | Description |
 |---|---|---|
 | POST | `/api/screening/run` | Trigger AI screening for a job |
-| GET | `/api/screening/:jobId` | Get ranked shortlist + reasoning for a job |
+| GET | `/api/screening/:jobId` | Get ranked shortlist + reasoning |
+
+### Chat
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/chat` | Send a message to the AI agent |
 
 ---
 
@@ -93,11 +117,12 @@ backend/
 Frontend (React)
     │
     ▼
-routes/  ──►  controllers/  ──►  services/geminiService.js  ──►  Gemini API
+routes/  ──►  controllers/  ──►  services/geminiService.ts  ──►  Gemini API
                    │                     │
                    ▼                     ▼
-              models/ (MongoDB)   services/scoringService.js
-                                  services/fileParserService.js
+              models/ (MongoDB)   chat/agent.ts + tools/
+                                  services/fileParserService.ts
+```
 ```
 
 ---
